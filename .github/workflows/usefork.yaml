@@ -1,41 +1,40 @@
-name: usefork
+name: AUTO VPN CRON
+
 on:
-  # performed every two hours
   schedule:
-    - cron: "0 */2 * * *"
-  workflow_dispatch:
+    - cron: '0 */2 * * *'   # 每2个小时跑一次
+  workflow_dispatch: # 允许手动触发
 
 jobs:
-  process:
+  build-and-commit:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: main
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Prepare
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-          architecture: "x64"
-          cache: "pip"
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
 
-      - name: Install
-        run: pip3 install -r requirements.txt
+    - name: Install dependencies
+      run: |
+        pip3 install pyYAML requests tqdm
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: usefork
-        run: python -u subscribe/usefork.py -s
+    - name: Collect proxies
+      run: |
+        python -u subscribe/usefork.py -s
 
-      - name: Configure Git
-        run: |
-          git config user.name "GitHub Action Bot"
-          git config user.email "action@github.com"
+    - name: Configure Git
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "actions@github.com"
 
-      - name: Update Gist
-        env:
-            GH_TOKEN: ${{ secrets.PAT }}
-        run: |
-          cd data
-          gh gist edit ${{ secrets.GIST_ID_FORK }} -add "fork_proxies.yaml"
+    - name: Create/Update Gist
+      env:
+        GH_TOKEN: ${{ secrets.PAT }}
+      run: |
+        cd data
+        gh gist edit ${{ secrets.GIST_ID_FORK }} --add "fork_proxies.yaml"
