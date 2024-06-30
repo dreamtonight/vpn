@@ -1,0 +1,41 @@
+name: usefork
+on:
+  # performed every two hours
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Prepare
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+          architecture: "x64"
+          cache: "pip"
+
+      - name: Install
+        run: pip3 install -r requirements.txt
+
+      - name: usefork
+        run: python -u subscribe/usefork.py -s
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Action Bot"
+          git config user.email "action@github.com"
+
+      - name: Update Gist
+        env:
+            GH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          cd data
+          gh gist edit ${{ secrets.GIST_ID_FORK }} -add "fork_proxies.yaml"
